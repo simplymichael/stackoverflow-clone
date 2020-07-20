@@ -1,0 +1,25 @@
+{
+  "name": "stack-overflow-clone",
+  "version": "0.0.0",
+  "description": "A simple clone of Stackoverflow for Softcom back-end assessment",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "commit": "git-cz"
+  },
+  "keywords": [
+    "softcom",
+    "stackoverflow"
+  ],
+  "author": "Michael Orji <simplymichaelorji@gmail.com> (https://linkedin.com/in/simplymichael)",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "commitizen": "4.1.2",
+    "cz-conventional-changelog": "3.2.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-conventional-changelog"
+    }
+  }
+}
