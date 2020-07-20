@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "test": "mocha __tests__",
+    "test:watch": "npm test -- -w",
     "lint": "./node_modules/.bin/eslint ./src",
     "lint:fix": "npm run lint -- --fix"
   },
@@ -16,6 +18,9 @@
     "morgan": "~1.9.1"
   },
   "devDependencies": {
-    "eslint": "7.5.0"
+    "chai": "4.2.0",
+    "chai-http": "4.3.0",
+    "eslint": "7.5.0",
+    "mocha": "8.0.1"
   }
 }

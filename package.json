@@ -4,9 +4,11 @@
   "description": "A simple clone of Stackoverflow for Softcom back-end assessment",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:backend",
+    "lint": "npm run lint:backend",
     "commit": "git-cz",
-    "lint:backend": "cd ./backend && npm run lint"
+    "lint:backend": "cd ./backend && npm run lint",
+    "test:backend": "cd ./backend && npm test"
   },
   "keywords": [
     "softcom",
@@ -24,7 +26,7 @@
       "path": "node_modules/cz-conventional-changelog"
     },
     "ghooks": {
-      "pre-commit": "npm run lint:backend"
+      "pre-commit": "npm run lint && npm test"
     }
   }
 }
