@@ -5,8 +5,9 @@
  */
 
 require('dotenv').config();
+const config = require('./config');
 const app = require('./app');
-const debug = require('debug')('backend:server');
+const debug = require('debug')(config.applicationName);
 const http = require('http');
 
 /**
@@ -19,14 +20,19 @@ app.set('port', port);
 /**
  * Create HTTP server.
  */
-
 const server = http.createServer(app);
 
-/**
- * Listen on provided port, on all network interfaces.
- */
+(async function() {
+  // Ensure the db is running before binding the server to the port
+  await config.initDb();
 
-server.listen(port);
+  /**
+   * Listen on provided port, on all network interfaces.
+   */
+
+  server.listen(port);
+})();
+
 server.on('error', onError);
 server.on('listening', onListening);
 
