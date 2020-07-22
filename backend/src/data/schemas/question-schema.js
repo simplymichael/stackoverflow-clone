@@ -1,27 +1,12 @@
 const Schema = require('mongoose').Schema;
-const { email, password } = require('../../utils/string');
 const { virtualSchemaOptions } = require('./_schema-helper.js');
 const schemaDefinition = {
-  username: {
-    type: String,
-    unique: true,
-    lowercase: true,
-    required: true,
-  },
-  name: {
-    first: { type: String, required: true },
-    last: { type: String, required: true },
-  },
-  email: {
-    type: String,
-    required: true,
-    lowercase: true,
-    validate: [email.validate, email.invalidMessage],
-  },
-  password: {
-    type: String,
-    required: true,
-    validate: [password.validate, password.invalidMessage]
+  title: { type: String, unique: true },
+  body: String,
+  author: {
+    type: Schema.ObjectId,
+    ref: 'User',
+    required: true
   },
   meta: {
     created_at: {
@@ -43,9 +28,9 @@ const schemaDefinition = {
   },
 };
 
-const UserSchema = new Schema(schemaDefinition, virtualSchemaOptions);
+const QuestionSchema = new Schema(schemaDefinition, virtualSchemaOptions);
 
-UserSchema.pre('save', function(next) {
+QuestionSchema.pre('save', function(next) {
   if(this.isNew) {
     this.meta.created_at = Date.now();
   }
@@ -54,43 +39,26 @@ UserSchema.pre('save', function(next) {
   next();
 });
 
-UserSchema.virtual('id').get(function() {
+QuestionSchema.virtual('id').get(function() {
   return this._id;
 });
 
-UserSchema
-  .virtual('full_name')
-  .get(function() {
-    return [this.name.first, this.name.last].join(' ');
-  })
-  .set(function(fullName) {
-    var nameParts = fullName.split(' ');
-    this.name.last = nameParts.pop();
-    this.name.first = nameParts.join(' ');
-  });
-
 // Create custom promise(-ified) versions of:
 // create()/save(), find(), count() findOne()
-UserSchema.statics = {
-  ...UserSchema.statics,
+QuestionSchema.statics = {
+  ...QuestionSchema.statics,
   insert: async function(data) {
     return new Promise((resolve, reject) => {
-      this.create(data, (err, user) => err ? reject(err) : resolve(user));
+      this.create(data, (err, result) => err ? reject(err) : resolve(result));
     });
   },
   search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
     const regex = new RegExp(str, 'i');
-    const where = {
-      '$or': [
-        { username: regex },
-        { 'name.first': regex },
-        { 'name.last': regex }
-      ]
-    };
+    const where = { '$or': [ { title: regex }, { body: regex } ] };
 
-    return await this.getUsers({ where, page, limit, orderBy });
+    return await this.getQuestions({ where, page, limit, orderBy });
   },
-  countUsers: async function(where) {
+  countQuestions: async function(where) {
     where = (typeof where === 'object' ? where : {});
 
     return new Promise((resolve, reject) => {
@@ -100,7 +68,7 @@ UserSchema.statics = {
       );
     });
   },
-  getUsers: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
+  getQuestions: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -120,15 +88,15 @@ UserSchema.statics = {
         });
       }
 
-      // Order by most recent registrations by default,
+      // Order by most recent questions,
       // unless client specifies otherwise
-      if(!Reflect.has(orderBy, 'signupDate') ||
-         !Object.keys(SORT).includes(orderBy.signupDate.toUpperCase())) {
+      if(!Reflect.has(orderBy, 'creationDate') ||
+         !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
         query.sort({ 'meta.created_at': SORT.DESC });
         // using: sort('[-]<FIELD>');
       } else {
         query.sort({
-          'meta.created_at': orderBy.signupDate.toUpperCase() === 'ASC'
+          'meta.created_at': orderBy.creationDate.toUpperCase() === 'ASC'
             ? SORT.ASC
             : SORT.DESC
         });
@@ -140,30 +108,30 @@ UserSchema.statics = {
         query.limit(LIMIT);
       }
 
-      query.exec(async (err, users) => (err) ? reject(err) : resolve(users));
+      query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
     });
   },
-  getUser: async function(id) {
+  getQuestion: async function(id) {
     return new Promise((resolve, reject) => {
-      this.findById(id, async (err, user) =>
-        err ? reject(err) : resolve(user));
+      this.findById(id, async (err, data) =>
+        err ? reject(err) : resolve(data));
     });
   },
-  updateUser: async function(id, updateData) {
+  updateQuestion: async function(id, updateData) {
     return new Promise((resolve, reject) => {
-      this.findOneAndUpdate({ id }, updateData, (err, user) =>
-        err ? reject(err) : resolve(user));
+      this.findOneAndUpdate({ id }, updateData, (err, result) =>
+        err ? reject(err) : resolve(result));
     });
   },
-  updateUsers: async function(where = {}, updateData) {
+  updateQuestions: async function(where = {}, updateData) {
     return new Promise((resolve, reject) => {
-      this.update(where, updateData, (err, users) =>
-        err ? reject(err) : resolve(users));
+      this.update(where, updateData, (err, result) =>
+        err ? reject(err) : resolve(result));
     });
   },
-  userExists: async function(id) {
-    return await this.getUser(id);
+  questionExists: async function(id) {
+    return await this.getQuestion(id);
   }
 };
 
-module.exports = UserSchema;
+module.exports = QuestionSchema;
