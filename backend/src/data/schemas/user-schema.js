@@ -1,5 +1,5 @@
 const Schema = require('mongoose').Schema;
-const { email, password } = require('../../utils/string');
+const emailValidator = require('email-validator');
 const { virtualSchemaOptions } = require('./_schema-helper.js');
 const schemaDefinition = {
   username: {
@@ -16,12 +16,14 @@ const schemaDefinition = {
     type: String,
     required: true,
     lowercase: true,
-    validate: [email.validate, email.invalidMessage],
+    validate: [
+      (email) => emailValidator.validate(email),
+      'Please provide a valid email'
+    ],
   },
   password: {
     type: String,
-    required: true,
-    validate: [password.validate, password.invalidMessage]
+    required: true
   },
   meta: {
     created_at: {
@@ -59,7 +61,7 @@ UserSchema.virtual('id').get(function() {
 });
 
 UserSchema
-  .virtual('full_name')
+  .virtual('fullname')
   .get(function() {
     return [this.name.first, this.name.last].join(' ');
   })
@@ -67,6 +69,12 @@ UserSchema
     var nameParts = fullName.split(' ');
     this.name.last = nameParts.pop();
     this.name.first = nameParts.join(' ');
+  });
+
+UserSchema
+  .virtual('signupDate')
+  .get(function() {
+    return this.meta.created_at;
   });
 
 // Create custom promise(-ified) versions of:
@@ -78,7 +86,7 @@ UserSchema.statics = {
       this.create(data, (err, user) => err ? reject(err) : resolve(user));
     });
   },
-  search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
+  search: async function(str, { page = 1, limit = 0, orderBy = {} }) {
     const regex = new RegExp(str, 'i');
     const where = {
       '$or': [
@@ -100,7 +108,7 @@ UserSchema.statics = {
       );
     });
   },
-  getUsers: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
+  getUsers: async function({ where = {}, page = 1, limit = 0, orderBy = {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -157,13 +165,36 @@ UserSchema.statics = {
   },
   updateUsers: async function(where = {}, updateData) {
     return new Promise((resolve, reject) => {
-      this.update(where, updateData, (err, users) =>
+      this.updateMany(where, updateData, (err, users) =>
         err ? reject(err) : resolve(users));
     });
   },
   userExists: async function(id) {
     return await this.getUser(id);
   }
+};
+
+UserSchema.methods = {
+  ...UserSchema.methods,
+  getQuestions: async function({ where = {}, page= 1, limit= 0, orderBy= {} }) {
+    where = (typeof where === 'object' ? where : {});
+    where.author = this._id;
+
+    return (
+      await this.model('Question')
+        .getQuestions({ where, page, limit, orderBy })
+    );
+  },
+
+  getAnswers: async function({ where = {}, page= 1, limit= 0, orderBy= {} }) {
+    where = (typeof where === 'object' ? where : {});
+    where.author = this._id;
+
+    return (
+      await this.model('Answer')
+        .getAnswers({ where, page, limit, orderBy })
+    );
+  },
 };
 
 module.exports = UserSchema;

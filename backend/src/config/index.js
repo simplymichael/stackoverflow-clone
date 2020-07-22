@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const config = require('./config');
 const debug = require('debug')(config.applicationName);
 
+config.debug = debug;
 config.initDb = async (options = {}) => {
   const {
     debug: debugMongo = config.mongodb.debug,
@@ -11,11 +12,14 @@ config.initDb = async (options = {}) => {
 
   try {
     mongoose.set('debug', debugMongo);
+
     const db = await mongoose.connect(dsn, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      useCreateIndex: true,
     });
-    debug('Successfully connected to MongoDb server');
+
+    debug('Successfully connected to MongoDB server');
 
     return db;
   } catch(err) {
@@ -27,21 +31,5 @@ config.initDb = async (options = {}) => {
     process.exit(1);
   }
 };
-
-/*
-mongoose.set('debug', config.mongodb.debug);
-mongoose.connect(config.mongodb.dsn, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => console.log('Successfully connected to MongoDb server'))
-  .catch((err) => {
-    console.log(`Failed to connect to MongoDB server:
-    message: ${err.message}
-    reason: ${util.format(err.reason)}
-    `);
-    process.exit(1);
-  });
-*/
 
 module.exports = config;

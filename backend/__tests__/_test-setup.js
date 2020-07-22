@@ -14,6 +14,7 @@ module.exports = {
     // Disconnect Mongoose
     after(async () => {
       await db.disconnect();
+      config.debug('Successfully disconnected from MongoDB server');
     });
   }
 };
