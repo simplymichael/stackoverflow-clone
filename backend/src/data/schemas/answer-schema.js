@@ -1,8 +1,12 @@
 const Schema = require('mongoose').Schema;
 const { virtualSchemaOptions } = require('./_schema-helper.js');
 const schemaDefinition = {
-  title: { type: String, unique: true, required: true },
   body: { type: String, required: true },
+  question: {
+    type: Schema.ObjectId,
+    ref: 'Question',
+    required: true,
+  },
   author: {
     type: Schema.ObjectId,
     ref: 'User',
@@ -28,9 +32,9 @@ const schemaDefinition = {
   },
 };
 
-const QuestionSchema = new Schema(schemaDefinition, virtualSchemaOptions);
+const AnswerSchema = new Schema(schemaDefinition, virtualSchemaOptions);
 
-QuestionSchema.pre('save', function(next) {
+AnswerSchema.pre('save', function(next) {
   if(this.isNew) {
     this.meta.created_at = Date.now();
   }
@@ -39,14 +43,14 @@ QuestionSchema.pre('save', function(next) {
   next();
 });
 
-QuestionSchema.virtual('id').get(function() {
+AnswerSchema.virtual('id').get(function() {
   return this._id;
 });
 
 // Create custom promise(-ified) versions of:
 // create()/save(), find(), count() findOne()
-QuestionSchema.statics = {
-  ...QuestionSchema.statics,
+AnswerSchema.statics = {
+  ...AnswerSchema.statics,
   insert: async function(data) {
     return new Promise((resolve, reject) => {
       this.create(data, (err, result) => err ? reject(err) : resolve(result));
@@ -56,9 +60,9 @@ QuestionSchema.statics = {
     const regex = new RegExp(str, 'i');
     const where = { '$or': [ { title: regex }, { body: regex } ] };
 
-    return await this.getQuestions({ where, page, limit, orderBy });
+    return await this.getAnswers({ where, page, limit, orderBy });
   },
-  countQuestions: async function(where) {
+  countAnswers: async function(where) {
     where = (typeof where === 'object' ? where : {});
 
     return new Promise((resolve, reject) => {
@@ -68,7 +72,7 @@ QuestionSchema.statics = {
       );
     });
   },
-  getQuestions: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
+  getAnswers: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -88,8 +92,7 @@ QuestionSchema.statics = {
         });
       }
 
-      // Order by most recent questions,
-      // unless client specifies otherwise
+      // Order by most recent, unless client specifies otherwise
       if(!Reflect.has(orderBy, 'creationDate') ||
          !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
         query.sort({ 'meta.created_at': SORT.DESC });
@@ -111,27 +114,27 @@ QuestionSchema.statics = {
       query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
     });
   },
-  getQuestion: async function(id) {
+  getAnswer: async function(id) {
     return new Promise((resolve, reject) => {
       this.findById(id, async (err, data) =>
         err ? reject(err) : resolve(data));
     });
   },
-  updateQuestion: async function(id, updateData) {
+  updateAnswer: async function(id, updateData) {
     return new Promise((resolve, reject) => {
       this.findOneAndUpdate({ id }, updateData, (err, result) =>
         err ? reject(err) : resolve(result));
     });
   },
-  updateQuestions: async function(where = {}, updateData) {
+  updateAnswers: async function(where = {}, updateData) {
     return new Promise((resolve, reject) => {
       this.update(where, updateData, (err, result) =>
         err ? reject(err) : resolve(result));
     });
   },
-  questionExists: async function(id) {
-    return await this.getQuestion(id);
+  answerExists: async function(id) {
+    return await this.getAnswer(id);
   }
 };
 
-module.exports = QuestionSchema;
+module.exports = AnswerSchema;
