@@ -10,6 +10,7 @@ const Question = require('../../../data/models/question-model');
 // Fields to return to the client when a new question is created
 // or when question data is requested
 const publicFields = ['id', 'title', 'body', 'author', 'creationDate'];
+const userPublicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
 
 /* GET list of questions */
 router.get('/', async function(req, res) {
@@ -31,7 +32,9 @@ router.get('/', async function(req, res) {
 router.get('/:questionId/', async function(req, res) {
   try {
     const id = req.params.questionId;
-    const question = await Question.findById(id, publicFields.join(' '));
+    const question = await Question.findById(id, publicFields.join(' '))
+      .populate('author', userPublicFields.join(' '))
+      .exec();
 
     res.status(statusCodes.ok).json({ data: question });
   } catch(err) {
