@@ -4,6 +4,7 @@ const emailValidator = require('./email-validator');
 const usernameValidator = require('./username-validator');
 const passwordValidator = require('./password-validator');
 const passwordConfirmationValidator = require('./password-confirmation-validator');
+const loginValidator = require('./login-validator');
 const validators = {
   firstname: firstnameValidator,
   lastname: lastnameValidator,
@@ -11,6 +12,7 @@ const validators = {
   email: emailValidator,
   password: passwordValidator,
   confirmPassword: passwordConfirmationValidator,
+  login: loginValidator,
 };
 
 module.exports = {

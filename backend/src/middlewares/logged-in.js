@@ -1,6 +1,12 @@
+const { statusCodes } = require('../utils/http');
+
 function loggedIn(req, res, next) {
   if (!req.session.user) {
-    res.send('Forbidden. Please log in first.', 403);
+    return res.status(statusCodes.unauthorized).json({
+      errors: [{
+        msg: 'Unauthorized. Please log in first.'
+      }]
+    });
   } else {
     next();
   }

@@ -3,9 +3,9 @@ const { validationResult } = require('express-validator');
 const debug = require('../../../config').debug;
 const notLoggedIn = require('../../../middlewares/not-logged-in');
 const { statusCodes } = require('../../../utils/http');
-const { hashPassword, generateAuthToken } = require('../../../utils/auth');
-const User = require('../../../data/models/user-model');
+const { hashPassword } = require('../../../utils/auth');
 const validator = require('../../../middlewares/validators/_validator');
+const User = require('../../../data/models/user-model');
 
 // Fields to return to the client when a new user is created
 // or when user data is requested
@@ -83,11 +83,8 @@ router.post('/', notLoggedIn,
         // Populate the user variable with values we want to return to the client
         publicFields.forEach(key => user[key] = data[key]);
 
-        // Create an auth token for the user so we can validate future requests
-        const { token, expiry } = generateAuthToken(user.id, email);
-
         return res.status(statusCodes.ok).json({
-          data: { user, accessToken: `Bearer ${token}`, expiresIn: expiry }
+          data: { user }
         });
       } catch(err) {
         if (err.code === 11000) {

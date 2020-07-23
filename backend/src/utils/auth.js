@@ -1,18 +1,14 @@
 require('dotenv').config();
-//const shajs = require('sha.js');
 const bcrypt = require('bcrypt');
 const jwt =  require('jsonwebtoken');
 const randomBytes = require('random-bytes');
 const { env } = process;
 
 const hashPassword = async (password) => {
-  //return shajs('sha256').update(password).digest('hex');
   return await bcrypt.hash(password, 10);
 };
 
 const checkPassword = async (password, hashedPassword) => {
-  //return hashPassword(password) === hashedPassword;
-  // Use bcrypt to compare the submitted password to the stored password
   return await bcrypt.compare(password, hashedPassword);
 };
 
