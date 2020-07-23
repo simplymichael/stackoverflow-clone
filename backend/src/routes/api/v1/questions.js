@@ -6,10 +6,12 @@ const loggedIn = require('../../../middlewares/logged-in');
 const { statusCodes } = require('../../../utils/http');
 const validator = require('../../../middlewares/validators/_validator');
 const Question = require('../../../data/models/question-model');
+const Answer = require('../../../data/models/answer-model');
 
 // Fields to return to the client when a new question is created
 // or when question data is requested
 const publicFields = ['id', 'title', 'body', 'author', 'creationDate'];
+const answerPublicFields = ['id', 'body', 'question', 'author', 'creationDate'];
 const userPublicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
 
 /* GET list of questions */
@@ -101,6 +103,55 @@ router.post('/', loggedIn, authorized, validator.validate('title', 'body'),
           debug(`Error creating question: ${err}`);
           return;
         }
+      }
+    }
+  }
+);
+
+router.post('/:questionId/answer', loggedIn, authorized, validator.validate('body'),
+  async function(req, res) {
+    const errors = validationResult(req);
+    const { questionId } = req.params;
+    const { body } = req.body;
+
+    if (!errors.isEmpty()) {
+      return res.status(statusCodes.badRequest).json({
+        errors: errors.array()
+      });
+    }
+
+    try {
+      const answerData = { body, question: questionId, author: req.session.user.id };
+      const data = await Answer.create(answerData);
+      const answer = {};
+
+      // Populate the user variable with values we want to return to the client
+      answerPublicFields.forEach(key => answer[key] = data[key]);
+
+      return res.status(statusCodes.ok).json({
+        data: { answer }
+      });
+    } catch(err) {
+      if (err.name === 'ValidationError') {
+        const validationErrors = Object.keys(err.errors).map((field) => {
+          return {
+            value: err.errors[field].value,
+            location: 'body',
+            msg: err.errors[field].message,
+            param: field
+          };
+        });
+
+        return res.status(statusCodes.badRequest).json({
+          errors: validationErrors
+        });
+      } else {
+        res.status(statusCodes.serverError).json({
+          errors: [{ msg: 'There was an error creating the answer' }]
+        });
+
+        debug(`Error creating answer: ${err}`);
+        return;
       }
     }
   }
