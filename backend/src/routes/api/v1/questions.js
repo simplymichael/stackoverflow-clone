@@ -10,7 +10,7 @@ const Answer = require('../../../data/models/answer-model');
 
 // Fields to return to the client when a new question is created
 // or when question data is requested
-const publicFields = ['id', 'title', 'body', 'author', 'creationDate'];
+const publicFields = ['id', 'title', 'body', 'author', 'answers', 'creationDate'];
 const answerPublicFields = ['id', 'body', 'question', 'author', 'creationDate'];
 const userPublicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
 
@@ -19,7 +19,9 @@ router.get('/', async function(req, res) {
   try {
     const questions = await Question.getQuestions({ returnFields: publicFields });
 
-    res.status(statusCodes.ok).json({ data: questions });
+    res.status(statusCodes.ok).json({
+      data: { questions }
+    });
   } catch(err) {
     res.status(statusCodes.serverError).json({
       errors: [{ msg: 'There was an error retrieving questions' }]
@@ -36,16 +38,12 @@ router.get('/:questionId/', async function(req, res) {
     const id = req.params.questionId;
     const question = await Question.findById(id, publicFields.join(' '))
       .populate('author', userPublicFields.join(' '))
+      .populate('answers', answerPublicFields.join(' '))
       .exec();
 
-    const answers = await Answer.getAnswers({
-      where: { question: id },
-      returnFields: answerPublicFields
+    res.status(statusCodes.ok).json({
+      data: { question }
     });
-
-    answers.forEach(answer => answer.populate('author'));
-
-    res.status(statusCodes.ok).json({ data: { question, answers } });
   } catch(err) {
     res.status(statusCodes.serverError).json({
       errors: [{ msg: 'There was an error retrieving question' }]
@@ -134,6 +132,9 @@ router.post('/:questionId/answer', loggedIn, authorized, validator.validate('bod
 
       // Populate the user variable with values we want to return to the client
       answerPublicFields.forEach(key => answer[key] = data[key]);
+
+      // Add the answer (id) as an embedded document in the question
+      await Question.updateQuestion(questionId, { $push: { answers: answer.id } });
 
       return res.status(statusCodes.ok).json({
         data: { answer }

@@ -8,6 +8,10 @@ const schemaDefinition = {
     ref: 'User',
     required: true
   },
+  answers: [{
+    type: Schema.ObjectId,
+    ref: 'Answer'
+  }],
   meta: {
     created_at: {
       type: Date,
@@ -50,7 +54,7 @@ QuestionSchema
   });
 
 // Create custom versions of:
-// create()/save(), find(), count() findOne()
+// find(), count(), findOneAndUpdate(), etc
 QuestionSchema.statics = {
   ...QuestionSchema.statics,
   search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
@@ -62,12 +66,7 @@ QuestionSchema.statics = {
   countQuestions: async function(where) {
     where = (typeof where === 'object' ? where : {});
 
-    return new Promise((resolve, reject) => {
-      this.countDocuments(where, (err, count) => err
-        ? reject(err)
-        : resolve(count)
-      );
-    });
+    return await this.countDocuments(where);
   },
   getQuestions: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
     page = parseInt(page, 10);
@@ -113,16 +112,10 @@ QuestionSchema.statics = {
     });
   },
   updateQuestion: async function(id, updateData) {
-    return new Promise((resolve, reject) => {
-      this.findOneAndUpdate({ id }, updateData, (err, result) =>
-        err ? reject(err) : resolve(result));
-    });
+    return await this.findOneAndUpdate({ _id: id }, updateData);
   },
   updateQuestions: async function(where = {}, updateData) {
-    return new Promise((resolve, reject) => {
-      this.update(where, updateData, (err, result) =>
-        err ? reject(err) : resolve(result));
-    });
+    return await this.update(where, updateData);
   },
   questionExists: async function(id) {
     return await this.findById(id);

@@ -17,6 +17,7 @@ config.initDb = async (options = {}) => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       useCreateIndex: true,
+      useFindAndModify: false,
     });
 
     debug('Successfully connected to MongoDB server');

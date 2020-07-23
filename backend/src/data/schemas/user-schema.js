@@ -77,8 +77,8 @@ UserSchema
     return this.meta.created_at;
   });
 
-// Create custom promise(-ified) versions of:
-// create()/save(), find(), count() findOne()
+// Create custom versions of:
+// find(), count(), findOneAndUpdate(), etc
 UserSchema.statics = {
   ...UserSchema.statics,
   search: async function(str, { page = 1, limit = 0, orderBy = {} }) {
@@ -96,12 +96,7 @@ UserSchema.statics = {
   countUsers: async function(where) {
     where = (typeof where === 'object' ? where : {});
 
-    return new Promise((resolve, reject) => {
-      this.countDocuments(where, (err, count) => err
-        ? reject(err)
-        : resolve(count)
-      );
-    });
+    return await this.countDocuments(where);
   },
   getUsers: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
     page = parseInt(page, 10);
@@ -147,16 +142,10 @@ UserSchema.statics = {
     });
   },
   updateUser: async function(id, updateData) {
-    return new Promise((resolve, reject) => {
-      this.findOneAndUpdate({ id }, updateData, (err, user) =>
-        err ? reject(err) : resolve(user));
-    });
+    return await this.findOneAndUpdate({ _id: id }, updateData);
   },
   updateUsers: async function(where = {}, updateData) {
-    return new Promise((resolve, reject) => {
-      this.updateMany(where, updateData, (err, users) =>
-        err ? reject(err) : resolve(users));
-    });
+    return await this.updateMany(where, updateData);
   },
   userExists: async function(id) {
     return await this.findById(id);

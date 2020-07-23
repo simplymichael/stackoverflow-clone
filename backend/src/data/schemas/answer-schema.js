@@ -53,8 +53,8 @@ AnswerSchema
     return this.meta.created_at;
   });
 
-// Create custom promise(-ified) versions of:
-// create()/save(), find(), count() findOne()
+// Create custom versions of:
+// find(), count(), findOneAndUpdate(), etc
 AnswerSchema.statics = {
   ...AnswerSchema.statics,
   search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
@@ -66,12 +66,7 @@ AnswerSchema.statics = {
   countAnswers: async function(where) {
     where = (typeof where === 'object' ? where : {});
 
-    return new Promise((resolve, reject) => {
-      this.countDocuments(where, (err, count) => err
-        ? reject(err)
-        : resolve(count)
-      );
-    });
+    return await this.countDocuments(where);
   },
   getAnswers: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
     page = parseInt(page, 10);
@@ -116,16 +111,10 @@ AnswerSchema.statics = {
     });
   },
   updateAnswer: async function(id, updateData) {
-    return new Promise((resolve, reject) => {
-      this.findOneAndUpdate({ id }, updateData, (err, result) =>
-        err ? reject(err) : resolve(result));
-    });
+    return await this.findOneAndUpdate({ _id: id }, updateData);
   },
   updateAnswers: async function(where = {}, updateData) {
-    return new Promise((resolve, reject) => {
-      this.update(where, updateData, (err, result) =>
-        err ? reject(err) : resolve(result));
-    });
+    return await this.update(where, updateData);
   },
   answerExists: async function(id) {
     return await this.findById(id);

@@ -16,7 +16,9 @@ router.get('/', async function(req, res) {
   try {
     const users = await User.getUsers({returnFields: publicFields});
 
-    res.status(statusCodes.ok).json({ data: users });
+    res.status(statusCodes.ok).json({
+      data: { users }
+    });
   } catch(err) {
     res.status(statusCodes.serverError).json({
       errors: [{ msg: 'There was an error retrieving users' }]
