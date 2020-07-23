@@ -9,7 +9,23 @@ const Question = require('../../../data/models/question-model');
 
 // Fields to return to the client when a new question is created
 // or when question data is requested
-const publicFields = ['title', 'body', 'author', 'creationDate'];
+const publicFields = ['id', 'title', 'body', 'author', 'creationDate'];
+
+/* GET users listing. */
+router.get('/', async function(req, res) {
+  try {
+    const questions = await Question.getQuestions({ returnFields: publicFields });
+
+    res.status(statusCodes.ok).json({ data: questions });
+  } catch(err) {
+    res.status(statusCodes.serverError).json({
+      errors: [{ msg: 'There was an error retrieving questions' }]
+    });
+
+    debug(`Error retrieving questions: ${err}`);
+    return;
+  }
+});
 
 router.post('/', loggedIn, authorized, validator.validate('title', 'body'),
   async function(req, res) {

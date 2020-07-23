@@ -69,7 +69,7 @@ QuestionSchema.statics = {
       );
     });
   },
-  getQuestions: async function({ where= {}, page= 1, limit= 0, orderBy= {} }) {
+  getQuestions: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -79,7 +79,7 @@ QuestionSchema.statics = {
     const WHERE = (where && typeof where === 'object' ? where : {});
 
     return new Promise((resolve, reject) => {
-      const query = this.find(WHERE);
+      const query = this.find(WHERE, returnFields.join(' '));
 
       for(let [key, val] of Object.entries(orderBy)) {
         let value = val.toUpperCase();
@@ -112,12 +112,6 @@ QuestionSchema.statics = {
       query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
     });
   },
-  getQuestion: async function(id) {
-    return new Promise((resolve, reject) => {
-      this.findById(id, async (err, data) =>
-        err ? reject(err) : resolve(data));
-    });
-  },
   updateQuestion: async function(id, updateData) {
     return new Promise((resolve, reject) => {
       this.findOneAndUpdate({ id }, updateData, (err, result) =>
@@ -131,7 +125,7 @@ QuestionSchema.statics = {
     });
   },
   questionExists: async function(id) {
-    return await this.getQuestion(id);
+    return await this.findById(id);
   }
 };
 
