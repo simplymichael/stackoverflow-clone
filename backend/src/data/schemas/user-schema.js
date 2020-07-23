@@ -81,11 +81,6 @@ UserSchema
 // create()/save(), find(), count() findOne()
 UserSchema.statics = {
   ...UserSchema.statics,
-  insert: async function(data) {
-    return new Promise((resolve, reject) => {
-      this.create(data, (err, user) => err ? reject(err) : resolve(user));
-    });
-  },
   search: async function(str, { page = 1, limit = 0, orderBy = {} }) {
     const regex = new RegExp(str, 'i');
     const where = {
@@ -108,7 +103,7 @@ UserSchema.statics = {
       );
     });
   },
-  getUsers: async function({ where = {}, page = 1, limit = 0, orderBy = {} }) {
+  getUsers: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -118,7 +113,7 @@ UserSchema.statics = {
     const WHERE = (where && typeof where === 'object' ? where : {});
 
     return new Promise((resolve, reject) => {
-      const query = this.find(WHERE);
+      const query = this.find(WHERE, returnFields.join(' '));
 
       for(let [key, val] of Object.entries(orderBy)) {
         let value = val.toUpperCase();
@@ -151,12 +146,6 @@ UserSchema.statics = {
       query.exec(async (err, users) => (err) ? reject(err) : resolve(users));
     });
   },
-  getUser: async function(id) {
-    return new Promise((resolve, reject) => {
-      this.findById(id, async (err, user) =>
-        err ? reject(err) : resolve(user));
-    });
-  },
   updateUser: async function(id, updateData) {
     return new Promise((resolve, reject) => {
       this.findOneAndUpdate({ id }, updateData, (err, user) =>
@@ -170,7 +159,7 @@ UserSchema.statics = {
     });
   },
   userExists: async function(id) {
-    return await this.getUser(id);
+    return await this.findById(id);
   }
 };
 

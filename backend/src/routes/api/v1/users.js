@@ -14,13 +14,7 @@ const publicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate
 /* GET users listing. */
 router.get('/', async function(req, res) {
   try {
-    const usersData = await User.getUsers({});
-    const users = usersData.map(userData => {
-      const user = {};
-      // Populate the user variable with values we want to return to the client
-      publicFields.forEach(key => user[key] = userData[key]);
-      return user;
-    });
+    const users = await User.getUsers({returnFields: publicFields});
 
     res.status(statusCodes.ok).json({ data: users });
   } catch(err) {
@@ -37,16 +31,17 @@ router.get('/', async function(req, res) {
 router.post('/', notLoggedIn,
   validator.validate('firstname', 'lastname', 'username', 'email', 'password', 'confirmPassword'),
   async function(req, res) {
+    const { firstname, lastname, username, email, password } = req.body;
+
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(statusCodes.badRequest).json({
+        errors: errors.array()
+      });
+    }
+
     try {
-      const errors = validationResult(req);
-      const { firstname, lastname, username, email, password } = req.body;
-
-      if (!errors.isEmpty()) {
-        return res.status(statusCodes.badRequest).json({
-          errors: errors.array()
-        });
-      }
-
       if((await User.getUsers({ where: {email} })).length) {
         return res.status(statusCodes.badRequest).json({
           errors: [{
@@ -58,7 +53,7 @@ router.post('/', notLoggedIn,
         });
       }
 
-      if((await  User.getUsers({ where: {username} })).length) {
+      if((await User.getUsers({ where: {username} })).length) {
         return res.status(statusCodes.badRequest).json({
           errors: [{
             value: username,
@@ -69,57 +64,55 @@ router.post('/', notLoggedIn,
         });
       }
 
-      try {
-        const hashedPassword = await hashPassword(password);
-        const registrationData = {
-          username: username,
-          name: { first: firstname, last: lastname },
-          email: email,
-          password: hashedPassword,
-        };
-        const data = await User.insert(registrationData);
-        const user = {};
+      const hashedPassword = await hashPassword(password);
+      const registrationData = {
+        username: username,
+        name: { first: firstname, last: lastname },
+        email: email,
+        password: hashedPassword,
+      };
+      const data = await User.create(registrationData);
+      const user = {};
 
-        // Populate the user variable with values we want to return to the client
-        publicFields.forEach(key => user[key] = data[key]);
+      // Populate the user variable with values we want to return to the client
+      publicFields.forEach(key => user[key] = data[key]);
 
-        return res.status(statusCodes.ok).json({
-          data: { user }
+      return res.status(statusCodes.ok).json({
+        data: { user }
+      });
+    } catch(err) {
+      if (err.code === 11000) {
+        return res.status(statusCodes.conflict).json({
+          errors: [{
+            value: '',
+            location: 'body',
+            msg: 'The email or username you are trying to use is not available',
+            param: 'email or username',
+          }]
         });
-      } catch(err) {
-        if (err.code === 11000) {
-          return res.status(statusCodes.conflict).json({
-            errors: [{
-              value: '',
+      } else {
+        if (err.name === 'ValidationError') {
+          const validationErrors = Object.keys(err.errors).map((field) => {
+            return {
+              value: field === 'password' ? password : err.errors[field].value,
               location: 'body',
-              msg: 'The email or username you are trying to use is not available',
-              param: 'email or username',
-            }]
+              msg: err.errors[field].message,
+              param: field
+            };
+          });
+
+          return res.status(statusCodes.badRequest).json({
+            errors: validationErrors
           });
         } else {
-          if (err.name === 'ValidationError') {
-            const validationErrors = Object.keys(err.errors).map((field) => {
-              return {
-                value: field === 'password' ? password : err.errors[field].value,
-                location: 'body',
-                msg: err.errors[field].message,
-                param: field
-              };
-            });
+          res.status(statusCodes.serverError).json({
+            errors: [{ msg: 'There was an error saving the user' }]
+          });
 
-            return res.status(statusCodes.badRequest).json({ errors: validationErrors });
-          } else {
-            throw (err);
-          }
+          debug(`Error saving the user: ${err}`);
+          return;
         }
       }
-    } catch (err) {
-      res.status(statusCodes.serverError).json({
-        errors: [{ msg: 'There was an error saving the user' }]
-      });
-
-      debug(`Error saving the user: ${err}`);
-      return;
     }
   });
 
