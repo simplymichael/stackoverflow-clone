@@ -42,7 +42,7 @@ app.use('/', indexRouter);
 for(const route in apiRoutes) {
   const regexp = route === 'index'
     ? `/api/v${apiVersion}/?`
-    : `/api/v${apiVersion}/${route}/?`;
+    : `/api/v${apiVersion}/${route}`;
 
   app.use(new RegExp(regexp, 'i'), apiRoutes[route]);
 }

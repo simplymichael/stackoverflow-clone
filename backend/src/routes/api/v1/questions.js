@@ -11,7 +11,7 @@ const Question = require('../../../data/models/question-model');
 // or when question data is requested
 const publicFields = ['id', 'title', 'body', 'author', 'creationDate'];
 
-/* GET users listing. */
+/* GET list of questions */
 router.get('/', async function(req, res) {
   try {
     const questions = await Question.getQuestions({ returnFields: publicFields });
@@ -23,6 +23,23 @@ router.get('/', async function(req, res) {
     });
 
     debug(`Error retrieving questions: ${err}`);
+    return;
+  }
+});
+
+/* GET details for question identified by ID. */
+router.get('/:questionId/', async function(req, res) {
+  try {
+    const id = req.params.questionId;
+    const question = await Question.findById(id, publicFields.join(' '));
+
+    res.status(statusCodes.ok).json({ data: question });
+  } catch(err) {
+    res.status(statusCodes.serverError).json({
+      errors: [{ msg: 'There was an error retrieving question' }]
+    });
+
+    debug(`Error retrieving question: ${err}`);
     return;
   }
 });
