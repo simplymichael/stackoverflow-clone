@@ -43,15 +43,16 @@ QuestionSchema.virtual('id').get(function() {
   return this._id;
 });
 
-// Create custom promise(-ified) versions of:
+QuestionSchema
+  .virtual('creationDate')
+  .get(function() {
+    return this.meta.created_at;
+  });
+
+// Create custom versions of:
 // create()/save(), find(), count() findOne()
 QuestionSchema.statics = {
   ...QuestionSchema.statics,
-  insert: async function(data) {
-    return new Promise((resolve, reject) => {
-      this.create(data, (err, result) => err ? reject(err) : resolve(result));
-    });
-  },
   search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
     const regex = new RegExp(str, 'i');
     const where = { '$or': [ { title: regex }, { body: regex } ] };

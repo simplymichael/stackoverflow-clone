@@ -22,16 +22,11 @@ const generateAuthToken = (userId, email) => {
   return { token: signedToken, expiry: tokenExpiry };
 };
 
-const verifyAuthToken = async (token) => {
-  const tokenSecret = env.AUTH_TOKEN_KEY;
-  const decoded = await jwt.verify(token, tokenSecret);
-
-  return decoded;
-};
+const decodeAuthToken = (token) => jwt.verify(token, env.AUTH_TOKEN_KEY);
 
 module.exports = {
   hashPassword,
   checkPassword,
   generateAuthToken,
-  verifyAuthToken,
+  decodeAuthToken,
 };
