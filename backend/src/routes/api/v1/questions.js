@@ -38,7 +38,14 @@ router.get('/:questionId/', async function(req, res) {
       .populate('author', userPublicFields.join(' '))
       .exec();
 
-    res.status(statusCodes.ok).json({ data: question });
+    const answers = await Answer.getAnswers({
+      where: { question: id },
+      returnFields: answerPublicFields
+    });
+
+    answers.forEach(answer => answer.populate('author'));
+
+    res.status(statusCodes.ok).json({ data: { question, answers } });
   } catch(err) {
     res.status(statusCodes.serverError).json({
       errors: [{ msg: 'There was an error retrieving question' }]
