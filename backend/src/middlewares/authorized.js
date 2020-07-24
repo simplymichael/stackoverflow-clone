@@ -3,14 +3,15 @@ const { decodeAuthToken } = require('../utils/auth');
 const User = require('../data/models/user-model');
 
 async function authorized(req, res, next) {
+  const errors = [{
+    value: '',
+    location: 'header',
+    msg: 'Invalid access token!',
+    param: 'authorization_token'
+  }];
+
   try {
     const userKey = req.header('Authorization');
-    const errors = [{
-      value: '',
-      location: 'header',
-      msg: 'Invalid access token!',
-      param: 'authorization_token'
-    }];
 
     if(!userKey) {
       return res.status(statusCodes.unauthorized).json({
@@ -58,6 +59,15 @@ async function authorized(req, res, next) {
 
     next();
   } catch(err) {
+    if(err.name === 'TokenExpiredError') {
+      return res.status(statusCodes.unauthorized).json({
+        errors: [{
+          ...(errors.pop()),
+          msg: 'Access token has expired'
+        }],
+      });
+    }
+
     next(err);
   }
 }
