@@ -1,8 +1,28 @@
 # Stackoverflow clone
 A simple clone of Stackoverflow for Softcom back-end assessment
 
+## Running
+### Prerequisites
+- Running or testing the application requires a running instance of a MongoDB server.
+- Copy `.env.example` to `.env` and edit environment data
+- Alternatively set the `env` variables on the command line
+
+## Starting on Windows
+set DEBUG=<APP_NAME>& npm start
+
+## Starting on Unix
+DEBUG=<APP_NAME> npm start
+
+## Testing
+
+### Pre-requisites
+- See the pre-requisites on the **Running** section
+- Run `npm test`
+
 ## Routes
 The base API route is **`/api/v1`**. So every route below is assumed to begin with the base route.
+
+A more detailed API documentation can be found on the [Swagger page](https://app.swaggerhub.com/apis/simplymichaelorji/StackoverflowCloneAPIForSoftcom/1.0.0)
 
 
 ### Users routes
