@@ -115,7 +115,7 @@ router.post('/', loggedIn, authorized, validator.validate('title', 'body'),
   }
 );
 
-router.post('/:questionId/answer', loggedIn, authorized, validator.validate('body'),
+router.post('/:questionId/answers', loggedIn, authorized, validator.validate('body'),
   async function(req, res) {
     const errors = validationResult(req);
     const { questionId } = req.params;
@@ -167,7 +167,7 @@ router.post('/:questionId/answer', loggedIn, authorized, validator.validate('bod
   }
 );
 
-router.post('/:questionId/vote', loggedIn, authorized, async function(req, res) {
+router.post('/:questionId/votes', loggedIn, authorized, async function(req, res) {
   const { questionId } = req.params;
   const { direction } = req.body;
   const currUserId = req.session.user.id;
