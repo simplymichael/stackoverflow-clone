@@ -4,44 +4,68 @@ A simple clone of Stackoverflow for Softcom back-end assessment
 ## Routes
 The base API route is **`/api/v1`**. So every route below is assumed to begin with the base route.
 
-| **Name**           | **Route**                   | **Body**          | **Headers**   | **Query** | **Response**       |
-|--------------------------------------------------|-------------------|---------------|-----------|--------------------|
+- **User signup**
+    - route: `POST /users`
+    - request headers: none              
+    - request body: (`firstname`, `lastname`, `email`, `username`, `password`, `confirmPassword`)
+    - response: `data` object with property `user`
 
-| User signup        | POST /users                 | firstname         |               |           | data.user          |
-|                    |                             | lastname          |               |           |                    |
-|                    |                             | email             |               |           |                    |
-|                    |                             | username          |               |           |                    |
-|                    |                             | password          |               |           |                    |
-|                    |                             | confirmPassword   |               |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **User sign in**
+    - route: `POST /login`
+    - request headers: none
+    - request body: (`email` or `username`, `password`)
+    - response:  `data` object with properties: `user` and `authorization`          
 
-| User sign in       | POST /login                 | email or username |               |           | data.user          |
-|                    |                             | password          |               |           | data.authorization |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **User sign out**
+    - route: `DELETE /logout`
+    - request headers: `Authorization`
+    - request body: none
+    - response:
 
-| User sign out      | DELETE /logout              |                   | Authorization |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **Ask question**
+    - route: `POST /questions`
+    - request headers: `Authorization`
+    - request body: (`title`, `body`)
+    - response: `data` object with property `question`
 
-| Ask question       | POST /questions             | title             | Authorization |           |                    |
-|                    |                             | body              |               |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **List questions**
+    - route: `GET /questions`
+    - request headers: none
+    - request body: none
+    - response: `data` object with property `questions`              
 
-| List questions     | GET /questions              |                   |               |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **View question**
+    - route: `GET /questions/:id`
+    - request headers: none
+    - request body: none
+    - response: `data` object with property `question`
 
-| View question      | GET /questions/:id          |                   |               |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **Answer question**
+    - route: `POST /questions/:id/answers`
+    - request headers: `Authorization`
+    - request body: (`body`)
+    - response: `data` object with property `answer`
 
-| Answer question    | POST /questions/:id/answers | body              | Authorization |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **Vote on a question**
+    - route: `POST /questions/:id/votes`
+    - request headers: `Authorization`
+    - request body: (`direction`: `up` | `down`)
+    - response: `data` object with property `vote`
 
-| Vote on a question | POST /questions/:id/votes   | direction         | Authorization |           |                    |
-|----------------------------------------------------------------------|---------------|-----------|--------------------|
+- **Search questions**
+    - route: `GET /questions/search`
+    - request headers: none
+    - request body: none
+    - response: `data` object with property `results`
 
-| Search questions   | GET /questions/search       |                   |               |           |                    |
-|--------------------|-----------------------------|-------------------|---------------|-----------|--------------------|
+- **Search answers**
+    - route: `GET /answers/search`
+    - request headers: none
+    - request body: none
+    - response: `data` object with property `results`
 
-| Search answers     | GET /answers/search         |                   |               |           |                    |
-|--------------------|-----------------------------|-------------------|---------------|-----------|--------------------|
-
-| Search users       | GET /users/search           |                   |               |           |                    |
+- **Search users**
+    - route: `GET /users/search`
+    - request headers: none
+    - request body: none
+    - response: `data` object with property `results`
