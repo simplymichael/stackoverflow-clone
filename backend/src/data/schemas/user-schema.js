@@ -61,6 +61,18 @@ UserSchema.virtual('id').get(function() {
 });
 
 UserSchema
+  .virtual('firstname')
+  .get(function() {
+    return this.name.first;
+  });
+
+UserSchema
+  .virtual('lastname')
+  .get(function() {
+    return this.name.last;
+  });
+
+UserSchema
   .virtual('fullname')
   .get(function() {
     return [this.name.first, this.name.last].join(' ');
@@ -81,24 +93,7 @@ UserSchema
 // find(), count(), findOneAndUpdate(), etc
 UserSchema.statics = {
   ...UserSchema.statics,
-  search: async function(str, { page = 1, limit = 0, orderBy = {} }) {
-    const regex = new RegExp(str, 'i');
-    const where = {
-      '$or': [
-        { username: regex },
-        { 'name.first': regex },
-        { 'name.last': regex }
-      ]
-    };
-
-    return await this.getUsers({ where, page, limit, orderBy });
-  },
-  countUsers: async function(where) {
-    where = (typeof where === 'object' ? where : {});
-
-    return await this.countDocuments(where);
-  },
-  getUsers: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
+  generateQuery: function({ where = {}, page = 1, limit = 0, orderBy = {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -106,40 +101,57 @@ UserSchema.statics = {
     const OFFSET = ((typeof page === 'number' && page > 0) ? page - 1 : 0);
     const LIMIT = ((typeof limit === 'number' && limit > 0) ? limit : 0);
     const WHERE = (where && typeof where === 'object' ? where : {});
+    const query = this.find(WHERE);
 
-    return new Promise((resolve, reject) => {
-      const query = this.find(WHERE, returnFields.join(' '));
+    for(let [key, val] of Object.entries(orderBy)) {
+      let value = val.toUpperCase();
+      query.sort({
+        [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
+        // using: sort({<FIELD>: 1/-1})
+      });
+    }
 
-      for(let [key, val] of Object.entries(orderBy)) {
-        let value = val.toUpperCase();
-        query.sort({
-          [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
-          // using: sort({<FIELD>: 1/-1})
-        });
-      }
+    // Order by most recent registrations by default,
+    // unless client specifies otherwise
+    if(!Reflect.has(orderBy, 'signupDate') ||
+       !Object.keys(SORT).includes(orderBy.signupDate.toUpperCase())) {
+      query.sort({ 'meta.created_at': SORT.DESC });
+      // using: sort('[-]<FIELD>');
+    } else {
+      query.sort({
+        'meta.created_at': orderBy.signupDate.toUpperCase() === 'ASC'
+          ? SORT.ASC
+          : SORT.DESC
+      });
+    }
 
-      // Order by most recent registrations by default,
-      // unless client specifies otherwise
-      if(!Reflect.has(orderBy, 'signupDate') ||
-         !Object.keys(SORT).includes(orderBy.signupDate.toUpperCase())) {
-        query.sort({ 'meta.created_at': SORT.DESC });
-        // using: sort('[-]<FIELD>');
-      } else {
-        query.sort({
-          'meta.created_at': orderBy.signupDate.toUpperCase() === 'ASC'
-            ? SORT.ASC
-            : SORT.DESC
-        });
-      }
+    query.skip(OFFSET * LIMIT);
 
-      query.skip(OFFSET * LIMIT);
+    if(LIMIT > 0) {
+      query.limit(LIMIT);
+    }
 
-      if(LIMIT > 0) {
-        query.limit(LIMIT);
-      }
+    return query;
+  },
+  generateSearchQuery: function(str, { page = 1, limit = 0, orderBy = {} }) {
+    const regex = new RegExp(str, 'i');
+    const where = {
+      '$or': [
+        { username: regex },
+        { email: regex },
+        { 'name.first': regex },
+        { 'name.last': regex }
+      ]
+    };
 
-      query.exec(async (err, users) => (err) ? reject(err) : resolve(users));
-    });
+    return this.generateQuery({ where, page, limit, orderBy });
+  },
+  countUsers: async function(where) {
+    if(typeof where === 'object') {
+      return await this.count(where);
+    } else {
+      return await this.estimatedDocumentCount();
+    }
   },
   updateUser: async function(id, updateData) {
     return await this.findOneAndUpdate({ _id: id }, updateData);

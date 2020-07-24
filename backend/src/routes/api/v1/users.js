@@ -9,12 +9,29 @@ const User = require('../../../data/models/user-model');
 
 // Fields to return to the client when a new user is created
 // or when user data is requested
-const publicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
+const publicFields = [
+  'id', 'firstname', 'lastname', 'fullname',
+  'email', 'username', 'signupDate'
+];
 
 /* GET users listing. */
 router.get('/', async function(req, res) {
   try {
-    const users = await User.getUsers({returnFields: publicFields});
+    const results = await User.generateQuery({})
+      .exec();
+
+    const users = [];
+
+    results.forEach(user => {
+      const currUser = {};
+
+      // Populate the user variable with values we want to return to the client
+      publicFields.forEach(key => {
+        currUser[key] = user[key];
+      });
+
+      users.push(currUser);
+    });
 
     res.status(statusCodes.ok).json({
       data: { users }
@@ -26,6 +43,88 @@ router.get('/', async function(req, res) {
 
     debug(`Error retrieving users: ${err}`);
     return;
+  }
+});
+
+/* Search for users */
+router.get('/search', async (req, res) => {
+  try {
+    let { query, page = 1, limit = 20, sort } = req.query;
+    let orderBy = {};
+
+    if(!query || query.trim().length === 0) {
+      return res.status(statusCodes.badRequest).json({
+        errors: [{
+          location: 'query',
+          msg: 'Please specify the query to search by',
+          param: 'query'
+        }]
+      });
+    }
+
+    // firstname:desc=lastname=email:asc
+    if(sort && sort.trim().length > 0) {
+      sort = sort.trim();
+      const sortData = sort.split('=');
+
+      orderBy = sortData.reduce((acc, val) => {
+        const data = val.split(':');
+        let orderKey = data[0].toLowerCase();
+
+        if(orderKey === 'firstname' || orderKey === 'lastname') {
+          orderKey = (orderKey === 'firstname' ? 'name.first' : 'name.last');
+        }
+
+        acc[orderKey] = ((data.length > 1) ? data[1] : '');
+
+        return acc;
+      }, {});
+    }
+
+    query = query.trim();
+
+    const queryParams = { page, limit, orderBy };
+    const regex = new RegExp(query, 'i');
+    const where = {
+      '$or': [
+        { username: regex },
+        { email: regex },
+        { 'name.first': regex },
+        { 'name.last': regex }
+      ]
+    };
+    const allUsersCount = await User.countUsers(where);
+    const results = await User.generateSearchQuery(query, queryParams)
+      .exec();
+
+    const users = [];
+
+    results.forEach(user => {
+      const currUser = {};
+
+      // Populate the user variable with values we want to return to the client
+      publicFields.forEach(key => {
+        currUser[key] = user[key];
+      });
+
+      users.push(currUser);
+    });
+
+    return res.status(statusCodes.ok).json({
+      data: {
+        total: allUsersCount,
+        length: results.length,
+        users,
+      }
+    });
+  } catch(err) {
+    debug(`User search error: ${err}`);
+
+    return res.status(statusCodes.serverError).json({
+      errors: [{
+        msg: 'There was an error processing your request. Please, try again',
+      }]
+    });
   }
 });
 
@@ -44,7 +143,7 @@ router.post('/', notLoggedIn,
     }
 
     try {
-      if((await User.getUsers({ where: {email} })).length) {
+      if((await User.generateQuery({ where: {email} }).exec()).length) {
         return res.status(statusCodes.badRequest).json({
           errors: [{
             value: email,
@@ -55,7 +154,7 @@ router.post('/', notLoggedIn,
         });
       }
 
-      if((await User.getUsers({ where: {username} })).length) {
+      if((await User.generateQuery({ where: {username} }).exec()).length) {
         return res.status(statusCodes.badRequest).json({
           errors: [{
             value: username,

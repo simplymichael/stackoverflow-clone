@@ -10,7 +10,10 @@ const User = require('../../../data/models/user-model');
 
 // Fields to return to the client when a new user is created
 // or when user data is requested
-const publicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
+const publicFields = [
+  'id', 'firstname', 'lastname', 'fullname',
+  'email', 'username', 'signupDate'
+];
 
 router.post('/', notLoggedIn, validator.validate('login', 'password'),
   async function(req, res) {
@@ -29,7 +32,7 @@ router.post('/', notLoggedIn, validator.validate('login', 'password'),
         });
       }
 
-      const users = await User.getUsers({ where });
+      const users = await User.generateQuery({ where }).exec();
 
       if(!users.length) {
         return res.status(statusCodes.notFound).json({

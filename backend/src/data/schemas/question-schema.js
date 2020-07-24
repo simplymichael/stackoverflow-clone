@@ -61,18 +61,13 @@ QuestionSchema
 // find(), count(), findOneAndUpdate(), etc
 QuestionSchema.statics = {
   ...QuestionSchema.statics,
-  search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
+  generateSearchQuery: function(str, { page = 1, limit = 0, orderBy = {} }) {
     const regex = new RegExp(str, 'i');
     const where = { '$or': [ { title: regex }, { body: regex } ] };
 
-    return await this.getQuestions({ where, page, limit, orderBy });
+    return this.generateQuery({ where, page, limit, orderBy });
   },
-  countQuestions: async function(where) {
-    where = (typeof where === 'object' ? where : {});
-
-    return await this.countDocuments(where);
-  },
-  getQuestions: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
+  generateQuery: function({ where = {}, page = 1, limit = 0, orderBy = {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -81,39 +76,46 @@ QuestionSchema.statics = {
     const LIMIT = ((typeof limit === 'number' && limit > 0) ? limit : 0);
     const WHERE = (where && typeof where === 'object' ? where : {});
 
-    return new Promise((resolve, reject) => {
-      const query = this.find(WHERE, returnFields.join(' '));
+    const query = this.find(WHERE);
 
-      for(let [key, val] of Object.entries(orderBy)) {
-        let value = val.toUpperCase();
-        query.sort({
-          [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
-          // using: sort({<FIELD>: 1/-1})
-        });
-      }
+    for(let [key, val] of Object.entries(orderBy)) {
+      let value = val.toUpperCase();
+      query.sort({
+        [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
+        // using: sort({<FIELD>: 1/-1})
+      });
+    }
 
-      // Order by most recent questions,
-      // unless client specifies otherwise
-      if(!Reflect.has(orderBy, 'creationDate') ||
-         !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
-        query.sort({ 'meta.created_at': SORT.DESC });
-        // using: sort('[-]<FIELD>');
-      } else {
-        query.sort({
-          'meta.created_at': orderBy.creationDate.toUpperCase() === 'ASC'
-            ? SORT.ASC
-            : SORT.DESC
-        });
-      }
+    // Order by most recent questions,
+    // unless client specifies otherwise
+    if(!Reflect.has(orderBy, 'creationDate') ||
+       !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
+      query.sort({ 'meta.created_at': SORT.DESC });
+      // using: sort('[-]<FIELD>');
+    } else {
+      query.sort({
+        'meta.created_at': orderBy.creationDate.toUpperCase() === 'ASC'
+          ? SORT.ASC
+          : SORT.DESC
+      });
+    }
 
-      query.skip(OFFSET * LIMIT);
+    query.skip(OFFSET * LIMIT);
 
-      if(LIMIT > 0) {
-        query.limit(LIMIT);
-      }
+    if(LIMIT > 0) {
+      query.limit(LIMIT);
+    }
 
-      query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
-    });
+    return query;
+
+    //return await query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
+  },
+  countQuestions: async function(where) {
+    if(typeof where === 'object') {
+      return await this.count(where);
+    } else {
+      return await this.estimatedDocumentCount();
+    }
   },
   updateQuestion: async function(id, updateData) {
     return await this.findOneAndUpdate({ _id: id }, updateData);

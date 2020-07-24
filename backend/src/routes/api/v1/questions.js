@@ -18,10 +18,31 @@ const userPublicFields = ['id', 'name', 'fullname', 'email', 'username', 'signup
 /* GET list of questions */
 router.get('/', async function(req, res) {
   try {
-    const questions = await Question.getQuestions({ returnFields: publicFields });
+    const allQuestionsCount = await Question.countQuestions();
+    const results = await Question.generateQuery({})
+      .populate('author', userPublicFields.join(' '))
+      .populate('answers', answerPublicFields.join(' '))
+      .populate('votes')
+      .exec();
+    const questions = [];
+
+    results.forEach(question => {
+      const currQuestion = {};
+
+      // Populate the user variable with values we want to return to the client
+      publicFields.forEach(key => {
+        currQuestion[key] = question[key];
+      });
+
+      questions.push(currQuestion);
+    });
 
     res.status(statusCodes.ok).json({
-      data: { questions }
+      data: {
+        total: allQuestionsCount,
+        length: results.length,
+        questions
+      }
     });
   } catch(err) {
     res.status(statusCodes.serverError).json({
@@ -30,6 +51,80 @@ router.get('/', async function(req, res) {
 
     debug(`Error retrieving questions: ${err}`);
     return;
+  }
+});
+
+/* Search for questions */
+router.get('/search', async (req, res) => {
+  try {
+    let { query, page = 1, limit = 20, sort } = req.query;
+    let orderBy = {};
+
+    if(!query || query.trim().length === 0) {
+      return res.status(statusCodes.badRequest).json({
+        errors: [{
+          location: 'query',
+          msg: 'Please specify the query to search for',
+          param: 'query'
+        }]
+      });
+    }
+
+    // title:desc=body=creationDate:asc
+    if(sort && sort.trim().length > 0) {
+      sort = sort.trim();
+      const sortData = sort.split('=');
+
+      orderBy = sortData.reduce((acc, val) => {
+        const data = val.split(':');
+        const orderKey = data[0].toLowerCase();
+
+        acc[orderKey] = ((data.length > 1) ? data[1] : '');
+
+        return acc;
+      }, {});
+    }
+
+    query = query.trim();
+
+    const queryParams = { page, limit, orderBy };
+    const regex = new RegExp(query, 'i');
+    const where = { '$or': [ { title: regex }, { body: regex } ] };
+    const allQuestionsCount = await Question.countQuestions(where);
+    const results = await Question.generateSearchQuery(query, queryParams)
+      .populate('author', userPublicFields)
+      .populate('answers', answerPublicFields)
+      .populate('votes')
+      .exec();
+
+    const questions = [];
+
+    results.forEach(question => {
+      const currQuestion = {};
+
+      // Populate the user variable with values we want to return to the client
+      publicFields.forEach(key => {
+        currQuestion[key] = question[key];
+      });
+
+      questions.push(currQuestion);
+    });
+
+    return res.status(statusCodes.ok).json({
+      data: {
+        total: allQuestionsCount,
+        length: results.length,
+        questions,
+      }
+    });
+  } catch(err) {
+    debug(`Question search error: ${err}`);
+
+    return res.status(statusCodes.serverError).json({
+      errors: [{
+        msg: 'There was an error processing your request. Please, try again',
+      }]
+    });
   }
 });
 
@@ -56,6 +151,7 @@ router.get('/:questionId/', async function(req, res) {
   }
 });
 
+/* Create a new question */
 router.post('/', loggedIn, authorized, validator.validate('title', 'body'),
   async function(req, res) {
     const errors = validationResult(req);
@@ -115,6 +211,7 @@ router.post('/', loggedIn, authorized, validator.validate('title', 'body'),
   }
 );
 
+/* Create a new answer to a question */
 router.post('/:questionId/answers', loggedIn, authorized, validator.validate('body'),
   async function(req, res) {
     const errors = validationResult(req);
@@ -128,6 +225,17 @@ router.post('/:questionId/answers', loggedIn, authorized, validator.validate('bo
     }
 
     try {
+      if(!(await Question.questionExists(questionId))) {
+        return res.status(statusCodes.notFound).json({
+          errors: [{
+            value: questionId,
+            location: 'param',
+            msg: 'Question does not exist',
+            param: 'questionId',
+          }]
+        });
+      }
+
       const answerData = { body, question: questionId, author: req.session.user.id };
       const data = await Answer.create(answerData);
       const answer = {};
@@ -167,6 +275,7 @@ router.post('/:questionId/answers', loggedIn, authorized, validator.validate('bo
   }
 );
 
+/* Vote on a question */
 router.post('/:questionId/votes', loggedIn, authorized, async function(req, res) {
   const { questionId } = req.params;
   const { direction } = req.body;
@@ -192,21 +301,32 @@ router.post('/:questionId/votes', loggedIn, authorized, async function(req, res)
     });
   }
 
-  const userVoteOnQuestion = await QuestionVote.findOne({
-    question: questionId, voter: currUserId
-  });
-
-  // If user alread voted on question,
-  // they cannot cast another vote
-  if(userVoteOnQuestion) {
-    return res.status(statusCodes.forbidden).json({
-      errors: [{
-        'msg': 'You already voted on this question',
-      }]
-    });
-  }
-
   try {
+    if(!(await Question.questionExists(questionId))) {
+      return res.status(statusCodes.notFound).json({
+        errors: [{
+          value: questionId,
+          location: 'param',
+          msg: 'Question does not exist',
+          param: 'questionId',
+        }]
+      });
+    }
+
+    const userVoteOnQuestion = await QuestionVote.findOne({
+      question: questionId, voter: currUserId
+    });
+
+    // If user alread voted on question,
+    // they cannot cast another vote
+    if(userVoteOnQuestion) {
+      return res.status(statusCodes.forbidden).json({
+        errors: [{
+          'msg': 'You already voted on this question',
+        }]
+      });
+    }
+
     const voteData = { direction, question: questionId, voter: currUserId };
     const vote = await QuestionVote.create(voteData);
 
@@ -232,10 +352,10 @@ router.post('/:questionId/votes', loggedIn, authorized, async function(req, res)
       });
     } else {
       res.status(statusCodes.serverError).json({
-        errors: [{ msg: 'There was an error creating the answer' }]
+        errors: [{ msg: 'There was an error voting on the question' }]
       });
 
-      debug(`Error creating answer: ${err}`);
+      debug(`Error voting on question: ${err}`);
       return;
     }
   }

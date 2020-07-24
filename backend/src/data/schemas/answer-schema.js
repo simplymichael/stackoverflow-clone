@@ -12,6 +12,10 @@ const schemaDefinition = {
     ref: 'User',
     required: true
   },
+  votes: [{
+    type: Schema.ObjectId,
+    ref: 'AnswerVote'
+  }],
   meta: {
     created_at: {
       type: Date,
@@ -57,18 +61,7 @@ AnswerSchema
 // find(), count(), findOneAndUpdate(), etc
 AnswerSchema.statics = {
   ...AnswerSchema.statics,
-  search: async function(str, { page= 1, limit= 0, orderBy= {} }) {
-    const regex = new RegExp(str, 'i');
-    const where = { '$or': [ { title: regex }, { body: regex } ] };
-
-    return await this.getAnswers({ where, page, limit, orderBy });
-  },
-  countAnswers: async function(where) {
-    where = (typeof where === 'object' ? where : {});
-
-    return await this.countDocuments(where);
-  },
-  getAnswers: async function({ where = {}, page = 1, limit = 0, orderBy = {}, returnFields = [] }) {
+  generateQuery: function({ where = {}, page = 1, limit = 0, orderBy = {} }) {
     page = parseInt(page, 10);
     limit = parseInt(limit, 10);
 
@@ -76,39 +69,49 @@ AnswerSchema.statics = {
     const OFFSET = ((typeof page === 'number' && page > 0) ? page - 1 : 0);
     const LIMIT = ((typeof limit === 'number' && limit > 0) ? limit : 0);
     const WHERE = (where && typeof where === 'object' ? where : {});
+    const query = this.find(WHERE);
 
-    return new Promise((resolve, reject) => {
-      const query = this.find(WHERE, returnFields.join(' '));
+    for(let [key, val] of Object.entries(orderBy)) {
+      let value = val.toUpperCase();
+      query.sort({
+        [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
+        // using: sort({<FIELD>: 1/-1})
+      });
+    }
 
-      for(let [key, val] of Object.entries(orderBy)) {
-        let value = val.toUpperCase();
-        query.sort({
-          [key]: Object.keys(SORT).includes(value) ? SORT[value] : SORT['ASC']
-          // using: sort({<FIELD>: 1/-1})
-        });
-      }
+    // Order by most recent, unless client specifies otherwise
+    if(!Reflect.has(orderBy, 'creationDate') ||
+       !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
+      query.sort({ 'meta.created_at': SORT.DESC });
+      // using: sort('[-]<FIELD>');
+    } else {
+      query.sort({
+        'meta.created_at': orderBy.creationDate.toUpperCase() === 'ASC'
+          ? SORT.ASC
+          : SORT.DESC
+      });
+    }
 
-      // Order by most recent, unless client specifies otherwise
-      if(!Reflect.has(orderBy, 'creationDate') ||
-         !Object.keys(SORT).includes(orderBy.creationDate.toUpperCase())) {
-        query.sort({ 'meta.created_at': SORT.DESC });
-        // using: sort('[-]<FIELD>');
-      } else {
-        query.sort({
-          'meta.created_at': orderBy.creationDate.toUpperCase() === 'ASC'
-            ? SORT.ASC
-            : SORT.DESC
-        });
-      }
+    query.skip(OFFSET * LIMIT);
 
-      query.skip(OFFSET * LIMIT);
+    if(LIMIT > 0) {
+      query.limit(LIMIT);
+    }
 
-      if(LIMIT > 0) {
-        query.limit(LIMIT);
-      }
+    return query;
+  },
+  generateSearchQuery: function(str, { page = 1, limit = 0, orderBy = {} }) {
+    const regex = new RegExp(str, 'i');
+    const where = { body: regex };
 
-      query.exec(async (err, result) => (err) ? reject(err) : resolve(result));
-    });
+    return this.generateQuery({ where, page, limit, orderBy });
+  },
+  countAnswers: async function(where) {
+    if(typeof where === 'object') {
+      return await this.countDocuments(where);
+    } else {
+      return await this.estimatedDocumentCount();
+    }
   },
   updateAnswer: async function(id, updateData) {
     return await this.findOneAndUpdate({ _id: id }, updateData);
