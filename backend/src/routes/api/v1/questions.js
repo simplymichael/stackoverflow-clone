@@ -7,10 +7,11 @@ const { statusCodes } = require('../../../utils/http');
 const validator = require('../../../middlewares/validators/_validator');
 const Question = require('../../../data/models/question-model');
 const Answer = require('../../../data/models/answer-model');
+const QuestionVote = require('../../../data/models/question-vote-model');
 
 // Fields to return to the client when a new question is created
 // or when question data is requested
-const publicFields = ['id', 'title', 'body', 'author', 'answers', 'creationDate'];
+const publicFields = ['id', 'title', 'body', 'author', 'answers', 'votes', 'creationDate'];
 const answerPublicFields = ['id', 'body', 'question', 'author', 'creationDate'];
 const userPublicFields = ['id', 'name', 'fullname', 'email', 'username', 'signupDate'];
 
@@ -39,6 +40,7 @@ router.get('/:questionId/', async function(req, res) {
     const question = await Question.findById(id, publicFields.join(' '))
       .populate('author', userPublicFields.join(' '))
       .populate('answers', answerPublicFields.join(' '))
+      .populate('votes')
       .exec();
 
     res.status(statusCodes.ok).json({
@@ -164,5 +166,79 @@ router.post('/:questionId/answer', loggedIn, authorized, validator.validate('bod
     }
   }
 );
+
+router.post('/:questionId/vote', loggedIn, authorized, async function(req, res) {
+  const { questionId } = req.params;
+  const { direction } = req.body;
+  const currUserId = req.session.user.id;
+
+  if (!direction) {
+    return res.status(statusCodes.badRequest).json({
+      errors: [{
+        'location': 'body',
+        'msg': 'The direction field is required',
+        'param': 'direction',
+      }]
+    });
+  }
+
+  if(!['up', 'down'].includes(direction.toLowerCase())) {
+    return res.status(statusCodes.badRequest).json({
+      errors: [{
+        'location': 'body',
+        'msg': 'The value of the direction field can only be either of "up" or "down"',
+        'param': 'direction',
+      }]
+    });
+  }
+
+  const userVoteOnQuestion = await QuestionVote.findOne({
+    question: questionId, voter: currUserId
+  });
+
+  // If user alread voted on question,
+  // they cannot cast another vote
+  if(userVoteOnQuestion) {
+    return res.status(statusCodes.forbidden).json({
+      errors: [{
+        'msg': 'You already voted on this question',
+      }]
+    });
+  }
+
+  try {
+    const voteData = { direction, question: questionId, voter: currUserId };
+    const vote = await QuestionVote.create(voteData);
+
+    // Add the vote (id) as an embedded document in the question
+    await Question.updateQuestion(questionId, { $push: { votes: vote._id } });
+
+    return res.status(statusCodes.ok).json({
+      data: { vote }
+    });
+  } catch(err) {
+    if (err.name === 'ValidationError') {
+      const validationErrors = Object.keys(err.errors).map((field) => {
+        return {
+          value: err.errors[field].value,
+          location: 'body',
+          msg: err.errors[field].message,
+          param: field
+        };
+      });
+
+      return res.status(statusCodes.badRequest).json({
+        errors: validationErrors
+      });
+    } else {
+      res.status(statusCodes.serverError).json({
+        errors: [{ msg: 'There was an error creating the answer' }]
+      });
+
+      debug(`Error creating answer: ${err}`);
+      return;
+    }
+  }
+});
 
 module.exports = router;

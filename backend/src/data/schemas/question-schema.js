@@ -12,6 +12,10 @@ const schemaDefinition = {
     type: Schema.ObjectId,
     ref: 'Answer'
   }],
+  votes: [{
+    type: Schema.ObjectId,
+    ref: 'QuestionVote'
+  }],
   meta: {
     created_at: {
       type: Date,
