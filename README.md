@@ -15,16 +15,16 @@ The base API route is **`/api/v1`**. So every route below is assumed to begin wi
     - response: `data` object with property `user`
 
 - **User sign in**
-    - route: `POST /login`
+    - route: `POST /users/login`
     - protected: `false`
     - request headers: none
     - request body: (`email` or `username`, `password`)
     - response:  `data` object with properties: `user` and `authorization`          
 
 - **User sign out**
-    - route: `DELETE /logout`
-    - protected: `true`
-    - request headers: `Authorization`
+    - route: `GET /users/logout`
+    - protected: `false`
+    - request headers: none
     - request body: none
     - response:
 
