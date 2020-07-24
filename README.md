@@ -41,7 +41,7 @@ The base API route is **`/api/v1`**. So every route below is assumed to begin wi
     - request headers: none              
     - request body: none
     - response: `data` object with properties: `total`, `length`, `users`
-
+----------------------
 
 ### Questions routes
 - **Ask question**
@@ -85,9 +85,9 @@ The base API route is **`/api/v1`**. So every route below is assumed to begin wi
     - request headers: `Authorization`
     - request body: (`direction`: `up` | `down`)
     - response: `data` object with property `vote`
+--------------------------
 
-
-### Answer routes
+### Answers routes
 - **Search answers**
     - route: `GET /answers/search?query=<str>`
     - protected: `false`
