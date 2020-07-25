@@ -4,6 +4,7 @@ A simple clone of Stackoverflow for Softcom back-end assessment
 ## Running
 ### Prerequisites
 - Running or testing the application requires a running instance of a MongoDB server.
+- Navigate to the `backend` directory: `cd backend`
 - Copy `.env.example` to `.env` and edit environment data
 - Alternatively set the `env` variables on the command line
 
