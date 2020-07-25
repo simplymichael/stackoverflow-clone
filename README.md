@@ -57,11 +57,12 @@ A more detailed API documentation can be found on the [Swagger page](https://app
     - response: `data` object with properties: `total`, `length`, `users`
 
 - **Search users**:
-    - route: `GET /users/search?query=<str>`
+    - route: `GET /users/search?query=<str>&page=<int>&limit=<int>&sort=<field_1>:ASC=<field_2>:DESC`
     - protected: `false`
     - request headers: none              
     - request body: none
     - response: `data` object with properties: `total`, `length`, `users`
+    - **Note**: Sort fields may include: `firstname`, `lastname`, `email`, `username`, `signupDate`.
 ----------------------
 
 ### Questions routes
@@ -80,11 +81,12 @@ A more detailed API documentation can be found on the [Swagger page](https://app
     - response: `data` object with properties: `total`, `length`, `questions`
 
 - **Search questions**
-    - route: `GET /questions/search?query=<str>`
+    - route: `GET /questions/search?query=<str>&page=<int>&limit=<int>&sort=<field_1>:ASC=<field_2>:DESC`
     - protected: `false`
     - request headers: none
     - request body: none
-    - response: `data` object with properties: `total`, `length`, `questions`              
+    - response: `data` object with properties: `total`, `length`, `questions`
+    - **Note**: Sort fields may include: `title`, `creationDate`.
 
 - **View question (retrieve details of a question)**
     - route: `GET /questions/:id`
@@ -110,11 +112,12 @@ A more detailed API documentation can be found on the [Swagger page](https://app
 
 ### Answers routes
 - **Search answers**
-    - route: `GET /answers/search?query=<str>`
+    - route: `GET /answers/search?query=<str>&page=<int>&limit=<int>&sort=<field_1>:ASC=<field_2>:DESC`
     - protected: `false`
     - request headers: none
     - request body: none
     - response: `data` object with properties: `total`, `length`, `results`
+    - **Note**: Sort fields may include: `body`, `creationDate`
 
 - **View answer (retrieve details of an answer)**
     - route: `GET /questions/:id`
