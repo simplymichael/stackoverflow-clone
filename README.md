@@ -9,10 +9,10 @@ A simple clone of Stackoverflow for Softcom back-end assessment
 - Alternatively set the `env` variables on the command line
 
 ## Starting on Windows
-set DEBUG=<APP_NAME>& npm start
+`set DEBUG=<APP_NAME>& npm start`
 
 ## Starting on Unix
-DEBUG=<APP_NAME> npm start
+`DEBUG=<APP_NAME> npm start`
 
 ## Testing
 
